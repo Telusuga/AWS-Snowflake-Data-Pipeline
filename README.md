@@ -97,23 +97,18 @@ Enhance metadata tracking using AWS Glue Data Catalog or custom metadata store
 ```plaintext
 project-root/
 ├── lambda/
-│   └── unzip_handler.py              # AWS Lambda to unzip & validate files
-├── glue_jobs/
-│   └── transform_movies.py           # Spark ETL script in AWS Glue
-├── data_samples/
-│   ├── movies.csv                    # Raw sample data
-│   ├── movies.parquet                # Parquet version
-│   └── manifest.json                 # Metadata manifest
-├── utils/
-│   └── generate_manifest.py          # Script to create manifest file
-├── diagrams/
-│   └── architecture.png              # Visual architecture
-├── scripts/
-│   ├── Extract.py                    # API/DB data extractor
+│   ├── Extract.py                    # API/DB data extractor in this file itself we are generating the manifest file
 │   ├── Zipping.py                    # Zips files and manifest
 │   └── Trigger_job.py                # Triggers Glue job
+├── glue_jobs/
+│   └── transform_movies.py           # Spark ETL script in AWS Glue
+├── Sample_data/
+│   ├── Raw_movie_data.csv            # Raw sample data
+│   ├── movie_data.parquet            # Parquet version
+│   └── manifest.json                 # Metadata manifest
+├── diagrams/
+│   └── architecture.png              # Visual architecture
 ├── snowflake/
 │   └── Snowflake SQL Commands        # CREATE TABLE + PIPE scripts
-├── AWS Glue Spark Job                # (Optional) Can move to glue_jobs/
 └── README.md                         # Documentation
 ```
