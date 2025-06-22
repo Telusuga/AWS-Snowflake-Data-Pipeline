@@ -1,0 +1,110 @@
+
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from pyspark.sql.functions import *
+
+
+sc = SparkContext.getOrCreate()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+
+#We create a spark Data frame from Glue Dynamic Frame which hold the data of movies and checks file
+
+movie_dyf=glueContext.create_dynamic_frame.from_options(
+connection_type="s3",
+connection_options={"path": ["s3://lambda-extract-test/unzipped/movie_data/test.parquet"]},
+format='parquet'
+)
+movie_df=movie_dyf.toDF()
+
+
+checks_dyf=glueContext.create_dynamic_frame.from_options(
+    connection_type='s3',
+    connection_options={"paths":["s3://lambda-extract-test/unzipped/movie_data/test.json"]},    
+    format='json')
+
+checks_df=checks_dyf.toDF()
+
+# This is to get the Columns in the checks file for validation 
+
+cols=checks_df.select(checks_df['columns']).collect()
+cols[0][0]
+clean_str = cols[0][0].strip("[]") 
+split_str=clean_str.split(", ")
+actual_list = [item.strip("'\"") for item in split_str]
+
+movies_count=checks_df.select(checks_df['total_movies']).collect()
+total_movies=movies_count[0][0]
+
+# Here we will be performing validation number of rows, number of columns and the columns are also being checked
+
+try:
+    if total_movies==movie_df.count():
+        print("Movie count is correct")
+except Exception as e:
+    print('Movie count is incorrect')
+    raise
+	
+try:
+    if len(actual_list)==len(movie_df.columns):
+        print("Columns are correct")
+except Exception as e:
+        print('Columns are incorrect')
+        raise
+		
+try:
+    for i in range(len(actual_list)):
+        if actual_list[i]==movie_df.columns[i]:
+            pass
+    print('The columns are matching')
+except Exception as e:
+    print('Columns are mismatched--->',e)
+    raise
+
+# Now here will be using Rating column to generate review data
+
+flattened_df = movie_df.withColumn("Rating", explode("Ratings"))
+review_df=flattened_df.select(col('imdbID'),col('Title'),col('Rating.Source'),col('Rating.Value'))
+
+#Finally we will be writing the data to another aarchival location for the snowflake pipe to pull the data
+
+movie_df=movie_df.dropDuplicates()
+movie_df=movie_df.withColumn('Ratings',col('Ratings').cast('string'))
+#movie_df.printSchema()
+movie_df.write.mode('overwrite').option('header', 'true').csv('s3://archival-movie-data/archival/full_data/')
+
+#Now we will generate the review data for the review table in Snowflake and make the data uniform across all the sources
+
+metacritic_df=review_df.where(col('Source')=='Metacritic')
+#metacritic_df.show()
+Metacritic_review=metacritic_df.withColumn('Value',split(col('Value'),'/').getItem(0))
+#Metacritic_review.show()
+Metacritic_review.write.mode('overwrite').option('header', 'true').csv('s3://refined-data-0305/archival/review/MetaCritic/')
+s3://refined-data-0305/archival/review/
+IMDB_df=review_df.where(col('Source')=='Internet Movie Database')
+#IMDB_df.show()
+IMDB_review=IMDB_df.withColumn('Value',split(col('Value'),'/').getItem(0))
+#IMDB_review.show()
+IMDB_review=IMDB_review.withColumn('Value', col('Value').cast('float'))
+#IMDB_review.printSchema()
+#IMDB_review.show()
+#IMDB_review=IMDB_review.withColumn('Value'.col('float')*100)
+#IMDB_review.show()
+IMDB_review=IMDB_review.withColumn('Value',col('Value')*10)
+IMDB_review=IMDB_review.withColumn('Value', col('Value').cast('int'))
+#IMDB_review.show()
+IMDB_review.write.mode('overwrite').option('header', 'true').csv('s3://refined-data-0305/archival/review/IMDB/')
+
+tomatoes_df=review_df.where(col('Source')=='Rotten Tomatoes')
+tomato_review=tomatoes_df.withColumn('Value',split(col('Value'),'%').getItem(0))
+#tomato_review.show()
+tomato_review=tomato_review.withColumn('Value',col('Value').cast('int'))
+#tomato_review.printSchema()
+tomato_review.write.mode('overwrite').option('header', 'true').csv('s3://refined-data-0305/archival/review/Tomato_review/')
+job.commit()

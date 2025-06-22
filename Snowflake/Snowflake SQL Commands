@@ -1,0 +1,147 @@
+#First we need to create a DB for the data that we hold
+create database Movies_Info
+
+use Movies_Info
+#We need create a Schema as well to make sure our tables stay in a organized way
+
+
+#Now we need to make connection to AWS, so we need to create a integration for a optimal way of connection between AWS and Snowflake
+
+CREATE or replace STORAGE INTEGRATION aws_conn_1
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = 'S3'
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::069311595498:role/aws-s3-snowflake'
+  STORAGE_ALLOWED_LOCATIONS = ('s3://lambda-extract-test','s3://refined-data-0305','s3://archival-movie-data/archival/');
+
+
+describe integration aws_conn_1
+
+#Now we will create File Format to make sure the CSV file is loaded correct
+
+create or replace file format csv_file_check
+type='CSV',
+skip_header=1,
+field_delimiter=','
+field_optionally_enclosed_by='"'   # This step make sure if "" are present in the string it will be handled 
+escape_unenclosed_field = NONE     # These 2 steps will make sure the escape characters are handled correctly
+escape = '\\';
+
+#Now create a stage for the landing table to make sure the load happens correctly into the landing table
+
+create or replace stage process_stage
+storage_integration=aws_conn_1
+url='s3://archival-movie-data/archival/'
+file_format=csv_file_check
+
+list @process_stage
+
+#This table contains all the movie info pulled from API, we had put all string because year had few miscellaneous data so had to put all columns as string
+
+CREATE or replace TABLE movies_landing (
+    Title          string,
+    Year           string,
+    Rated          string,
+    Released       string,
+    Runtime        string,
+    Genre          string,
+    Director       string,
+    Writer         string,
+    Actors         string,
+    Plot           string,
+    Language       string,
+    Country        string,
+    Awards         string,
+    Poster         string,
+    Ratings        string,
+    Metascore      string,
+    imdbRating     string,
+    imdbVotes      string,
+    imdbID         string,
+    Type           string,
+    DVD            string,
+    BoxOffice      string,
+    Production     string,
+    Website        string,
+    Response       string,
+    totalSeasons   string
+);
+
+# test the copy command before creating Pipe
+copy into MOVIES_INFO.PUBLIC.MOVIES_LANDING
+from @process_stage/full_data/
+file_format=(format_name='csv_file_check')
+ON_ERROR = 'ABORT_STATEMENT';
+
+
+list @process_stage/
+
+
+select * from MOVIES_INFO.PUBLIC.MOVIES_LANDING
+
+
+#Now create a SnowPipe to load data automatically into the table-->MOVIES_INFO.PUBLIC.MOVIES_LANDING
+
+create or replace pipe raw_pipe
+auto_ingest=True
+as
+copy into MOVIES_INFO.PUBLIC.MOVIES_LANDING
+from @process_stage/full_data/
+file_format=(format_name='csv_file_check')
+
+
+describe pipe raw_pipe
+
+#ALTER PIPE raw_pipe REFRESH;--->This command is used to make the pipe run manually
+
+
+#Now create the review table , this will hold the info for review data that is pulled from landing table
+
+create or replace table movie_reviews
+(
+imdb_id string,
+movie_name string,
+review_provider string,
+rating int
+)
+
+
+#Now create a stage and a pipe with configs given below
+create or replace stage reviews_stage
+storage_integration=aws_conn_1
+url='s3://refined-data-0305/archival/review/'
+file_format=csv_file_check
+
+list @reviews_stage
+
+
+
+create or replace pipe review_pipe
+auto_ingest=True
+as
+copy into MOVIES_INFO.PUBLIC.MOVIE_REVIEWS
+from @reviews_stage
+file_format=(format_name='csv_file_check')
+
+
+describe pipe review_pipe
+
+
+
+select * from movie_reviews
+
+
+
+# This is consumption layer of the reviews and this contains the rating info of the movies. This can be integrated to Power BI for better insights
+create or replace view rating_charts
+as
+select movie_name, 
+max(rating) as Highest_Rating,
+min(rating) as Lowest_Rating,
+round(avg(rating)) as Avg_Rating
+from movie_reviews
+group by 1 
+order by 2 desc, 3 desc, 4 desc
+
+
+select * from rating_charts
