@@ -13,19 +13,20 @@ This project demonstrates a complete end-to-end data pipeline built using AWS an
 ## 🏗️ Architecture
 
 ```mermaid
-graph TD
-    A[External Source (DB/API)] --> B[Raw CSV + Parquet Conversion]
-    B --> C[Metadata Manifest File]
-    C --> D[Zip Files]
-    D --> E[S3: Landing Bucket]
-    E --> F[Lambda: Unzip & Organize Files]
-    F --> G[S3: Processed Bucket]
-    G --> H[AWS Glue: Transform Data]
-    H --> I[S3: Archive Bucket (CSV)]
-    I --> J[Snowpipe: Load into Snowflake]
-    J --> K[Snowflake Tables]
-    K --> L[BI Tools (Power BI / Tableau)]
-    K --> M[Alerting (SNS/Email)]
+flowchart TD
+    A[External Source (DB/API)] --> B[CSV + Parquet + Manifest]
+    B --> C[Zip Files]
+    C --> D[S3 Landing Bucket]
+    D --> E[Lambda (Unzip + Validate)]
+    E --> F[S3 Processed Bucket]
+    F --> G[AWS Glue (Transform + Validate)]
+    G --> H[S3 Archive Bucket]
+    H --> I[Snowpipe]
+    I --> J[Snowflake Table]
+    J --> K[Power BI / Tableau]
+    J --> L[SNS Alerts on Failure]
+```
+
 
 
 ⚙️ Components
