@@ -94,23 +94,26 @@ Enhance metadata tracking using AWS Glue Data Catalog or custom metadata store
 
 📁 Project Structure
 
+```plaintext
+project-root/
 ├── lambda/
-│   └── unzip_handler.py               # AWS Lambda function to unzip & validate files
+│   └── unzip_handler.py              # AWS Lambda to unzip & validate files
 ├── glue_jobs/
-│   └── transform_movies.py           # AWS Glue Spark script for transformation & validation
+│   └── transform_movies.py           # Spark ETL script in AWS Glue
 ├── data_samples/
-│   ├── movies.csv                    # Sample movie dataset (raw)
-│   ├── movies.parquet                # Parquet version for Glue processing
-│   └── manifest.json                 # Metadata file describing batch contents
+│   ├── movies.csv                    # Raw sample data
+│   ├── movies.parquet                # Parquet version
+│   └── manifest.json                 # Metadata manifest
 ├── utils/
-│   └── generate_manifest.py          # Utility to auto-generate manifest files
+│   └── generate_manifest.py          # Script to create manifest file
 ├── diagrams/
-│   └── architecture.png              # Visual architecture of the pipeline
+│   └── architecture.png              # Visual architecture
 ├── scripts/
-│   ├── Extract.py                    # Script to pull data from external API/DB
-│   ├── Zipping.py                    # Script to zip data + manifest
-│   ├── Trigger_job.py                # Optional trigger for Glue jobs
+│   ├── Extract.py                    # API/DB data extractor
+│   ├── Zipping.py                    # Zips files and manifest
+│   └── Trigger_job.py                # Triggers Glue job
 ├── snowflake/
-│   └── Snowflake SQL Commands        # Snowflake table creation and Snowpipe scripts
-├── AWS Glue Spark Job                # Job script (can be moved to glue_jobs/)
-├── README.md                         # Documentation
+│   └── Snowflake SQL Commands        # CREATE TABLE + PIPE scripts
+├── AWS Glue Spark Job                # (Optional) Can move to glue_jobs/
+└── README.md                         # Documentation
+```
