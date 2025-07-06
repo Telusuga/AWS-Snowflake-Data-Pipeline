@@ -4,7 +4,8 @@
 
 This project demonstrates a complete end-to-end data pipeline built using AWS and Snowflake. The pipeline extracts movie-related data from an external source (DB/API), processes and transforms the data, and loads it into Snowflake for analytics and dashboarding. It also includes monitoring and alerting mechanisms, with potential enhancements for building a dimensional model using SCD techniques.
 
-![image](https://github.com/user-attachments/assets/bf5d15c7-262a-4d28-96ff-b1d3ece22523)
+![image](https://github.com/user-attachments/assets/a1242d1a-9afc-4c30-9be9-84457214cdc8)
+
 
 
 ---
