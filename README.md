@@ -10,90 +10,99 @@ This project demonstrates a complete end-to-end data pipeline built using AWS an
 
 ---
 
-## 🏗️ Architecture
+🏗️ Architecture
 
 📡 Source Layer
-    ⇨ Movie data pulled from external DB/API
+⇨ Movie data pulled from external DB/API.
 
 📦 Ingestion & Staging
-    ⇨ Data converted to CSV & Parquet
-    ⇨ Manifest file generated
-    ⇨ Files zipped and uploaded to S3 (Landing Zone)
+✅ Data converted to CSV & Parquet.
+✅ Manifest file generated.
+✅ Files zipped and uploaded to S3 Landing Zone.
+
+⚙️ Orchestration Layer (Airflow)
+✅ Airflow (Dockerized) orchestrates the pipeline:
+
+Triggers extraction and zipping functions on-prem or on EC2.
+
+Monitors S3 for new uploads using sensors.
+
+Triggers Lambda for unzipping when new files land in S3.
+
+Triggers Glue ETL jobs for transformation and validation.
+
+Monitors Glue job completion for downstream dependencies.
+
+Triggers Snowpipe data loads into Snowflake upon successful Glue completion.
+
+Handles failure notifications via SNS if tasks fail.
+
+Schedules periodic runs and backfills as needed.
 
 ⚙️ Processing & Transformation
-    ⇨ Lambda unzips and validates files
-    ⇨ AWS Glue (Spark) transforms and validates data
+✅ Lambda unzips and validates files on S3 upload.
+✅ AWS Glue (Spark) transforms, cleanses, and enriches data.
+✅ Writes output as CSV/Parquet into the Processed/Archive S3 bucket.
 
 🏁 Load & Storage
-    ⇨ Transformed data stored in S3 (Archive)
-    ⇨ Snowpipe ingests data into Snowflake
+✅ Transformed data stored in S3 (Processed/Archive).
+✅ Snowpipe automatically ingests data into Snowflake tables for analytics.
 
 📊 Consumption & Monitoring
-    ⇨ Dashboards via Power BI / Tableau
-    ⇨ Logs via CloudWatch
-    ⇨ Alerts via SNS (Email notifications)
+✅ Snowflake tables and views power dashboards in Power BI, Tableau, or Looker.
+✅ Logs via CloudWatch for Lambda and Glue jobs.
+✅ Airflow logs and UI for orchestrated task visibility.
+✅ Alerts via SNS (email notifications) on failures.
 
+⚙️ Components Recap
+🔄 Data Ingestion Source: External DB/API with movie info.
+🗂️ Format: CSV and Parquet with manifest generation.
+🗜️ Compression: CSV + manifest zipped.
 
+☁️ AWS S3:
 
+Landing Bucket: Stores zipped data.
 
+Processed Bucket: Receives unzipped files.
 
-⚙️ Components
-🔄 Data Ingestion
-Source: External DB/API with movie info
+Archive Bucket: Stores final transformed data.
 
-Format: Converted to CSV and Parquet
+🧩 Lambda Function:
 
-Metadata: Manifest file created
+Triggered on new file upload.
 
-Compression: CSV + Manifest zipped
+Unzips and validates files.
 
-☁️ AWS S3
-Landing Bucket: Stores zipped data
+Moves content to S3 processed location.
 
-Processed Bucket: Receives unzipped files via Lambda
+🔥 AWS Glue:
 
-Archive Bucket: Stores final transformed CSVs
+Spark-based transformations.
 
-🧩 Lambda Function
-Triggered on file upload
+Cleansing and enrichment.
 
-Unzips incoming archive
+Writes output to processed/archive bucket.
 
-Moves contents to correct S3 location
+❄️ Snowflake Integration:
 
-🔥 AWS Glue Job
-Spark-based transformation of CSV/Parquet
+Snowpipe monitors archive bucket.
 
-Data cleansing and enrichment
+Auto-loads transformed data into Snowflake tables.
 
-Writes output as CSV into the archive bucket
-
-❄️ Snowflake Integration
-Snowpipe monitors archive bucket
-
-Automatically loads transformed data into target tables
-
-📊 Consumption Layer
-Snowflake tables form the base for dashboards
-
-Compatible with Power BI, Tableau, and other BI tools
-
-🚨 Monitoring & Alerting
-CloudWatch for logging Glue/Lambda
-
-AWS SNS for failure notifications to registered email addresses
+🪐 Airflow Enhancements in the Pipeline:
+✅ Modular DAGs for extraction, transformation, and load.
+✅ Dynamic task triggering for Lambda, Glue, and Snowpipe orchestration.
+✅ XCom for metadata propagation across tasks.
+✅ SLA monitoring and failure retries for robust orchestration.
+✅ Future integration with Git-based CI/CD for DAG management.
 
 🌟 Future Enhancements
-Implement star/snowflake schema in Snowflake
-
-Enable SCD Type 1 / Type 2 using Snowflake Streams and Tasks
-
-Add unit tests & CI/CD pipeline for Lambda and Glue jobs
-
-Cost optimization by moving infrequent data to Glacier
-
-Enhance metadata tracking using AWS Glue Data Catalog or custom metadata store
-
+✅ Implement star/snowflake schema in Snowflake.
+✅ Enable SCD Type 1/2 using Snowflake Streams and Tasks.
+✅ Unit tests & CI/CD pipeline for Lambda, Glue, and Airflow DAGs.
+✅ Cost optimization by archiving infrequent data to Glacier.
+✅ Enhance metadata tracking using Glue Data Catalog or a custom metadata store.
+✅ Integrate with dbt for SQL transformation lineage in Snowflake.
 
 
 📁 Project Structure
@@ -114,5 +123,7 @@ project-root/
 │   └── architecture.png              # Visual architecture
 ├── snowflake/
 │   └── Snowflake SQL Commands        # CREATE TABLE + PIPE scripts
+├── Airflow/
+    └── trigger.py                    # Airflow Code for Triggering
 └── README.md                         # Documentation
 ```
